@@ -7,7 +7,7 @@ int Fun4All_G4_fsPHENIX(
 		       )
 {
   // Set the number of TPC layer
-  const int n_TPC_layers = 60;  // use 60 for backward compatibility only
+  const int n_TPC_layers = 40;  // use 60 for backward compatibility only
 
   //===============
   // Input options
@@ -43,8 +43,6 @@ int Fun4All_G4_fsPHENIX(
   bool do_svtx_cell = do_svtx && true;
   bool do_svtx_track = do_svtx_cell && true;
   bool do_svtx_eval = do_svtx_track && false;
-
-  bool do_preshower = false;
 
   bool do_cemc = true;
   bool do_cemc_cell = do_cemc && true;
@@ -108,7 +106,7 @@ int Fun4All_G4_fsPHENIX(
 
   // establish the geometry and reconstruction setup
   gROOT->LoadMacro("G4Setup_fsPHENIX.C");
-  G4Init(do_svtx,do_preshower,do_cemc,do_hcalin,do_magnet,do_hcalout,do_pipe,do_FGEM,do_FEMC,do_FHCAL,n_TPC_layers);
+  G4Init(do_svtx,do_cemc,do_hcalin,do_magnet,do_hcalout,do_pipe,do_FGEM,do_FEMC,do_FHCAL,n_TPC_layers);
 
   int absorberactive = 0; // set to 1 to make all absorbers active volumes
   //  const string magfield = "1.5"; // if like float -> solenoidal field in T, if string use as fieldmap name (including path)
@@ -150,10 +148,7 @@ int Fun4All_G4_fsPHENIX(
     }
   else if (readhepmc)
     {
-      // this module is needed to read the HepMC records into our G4 sims
-      // but only if you read HepMC input files
-      HepMCNodeReader *hr = new HepMCNodeReader();
-      se->registerSubsystem(hr);
+    // action is performed in later stage at the input manager level
     }
   else if (runpythia8)
     {
@@ -163,9 +158,6 @@ int Fun4All_G4_fsPHENIX(
       // see coresoftware/generators/PHPythia8 for example config
       pythia8->set_config_file("phpythia8.cfg"); 
       se->registerSubsystem(pythia8);
-
-      HepMCNodeReader *hr = new HepMCNodeReader();
-      se->registerSubsystem(hr);
     }
   else if (runpythia6)
     {
@@ -174,9 +166,6 @@ int Fun4All_G4_fsPHENIX(
       PHPythia6 *pythia6 = new PHPythia6();
       pythia6->set_config_file("phpythia6.cfg");
       se->registerSubsystem(pythia6);
-
-      HepMCNodeReader *hr = new HepMCNodeReader();
-      se->registerSubsystem(hr);
     }
   else
     {
@@ -214,7 +203,7 @@ int Fun4All_G4_fsPHENIX(
       //---------------------
 
       G4Setup(absorberactive, magfield, TPythia6Decayer::kAll,
-	      do_svtx, do_preshower, do_cemc, do_hcalin, do_magnet, do_hcalout, do_pipe,
+	      do_svtx, do_cemc, do_hcalin, do_magnet, do_hcalout, do_pipe,
 	      do_FGEM, do_FEMC, do_FHCAL,
 	      magfield_rescale);
       
@@ -376,7 +365,6 @@ int Fun4All_G4_fsPHENIX(
       G4DSTreader_fsPHENIX( outputFile, //
           /*int*/ absorberactive ,
           /*bool*/ do_svtx ,
-          /*bool*/ do_preshower ,
           /*bool*/ do_cemc ,
           /*bool*/ do_hcalin ,
           /*bool*/ do_magnet ,

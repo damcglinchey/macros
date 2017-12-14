@@ -52,7 +52,7 @@ CEmc_1DProjectiveSpacal(PHG4Reco *g4Reco, double radius, const int crossings, co
 
   if (radius > emc_inner_radius)
   {
-    cout << "inconsistency: preshower radius+thickness: " << radius
+    cout << "inconsistency: pstof outer radius: " << radius
          << " larger than emc inner radius: " << emc_inner_radius
          << endl;
     gSystem->Exit(-1);
@@ -257,8 +257,7 @@ void CEMC_Cells(int verbosity = 0)
       //          cemc_cells->etaphisize(i, 0.024, 0.024);
       const double radius = 95;
       cemc_cells->cellsize(i, 2 * TMath::Pi() / 256. * radius, 2 * TMath::Pi() / 256. * radius);
-      cemc_cells->set_double_param(i, "tmin", 0.);
-      cemc_cells->set_double_param(i, "tmax", 60.);
+
     }
     se->registerSubsystem(cemc_cells);
   }
@@ -267,7 +266,6 @@ void CEMC_Cells(int verbosity = 0)
     PHG4FullProjSpacalCellReco *cemc_cells = new PHG4FullProjSpacalCellReco("CEMCCYLCELLRECO");
     cemc_cells->Detector("CEMC");
     cemc_cells->Verbosity(verbosity);
-    cemc_cells->set_timing_window(0.0, 60.0);
     cemc_cells->get_light_collection_model().load_data_file(
         string(getenv("CALIBRATIONROOT")) + string("/CEMC/LightCollection/Prototype3Module.xml"),
         "data_grid_light_guide_efficiency", "data_grid_fiber_trans");
@@ -312,7 +310,7 @@ void CEMC_Towers(int verbosity = 0)
   else
   {
     std::cout
-        << "G4_CEmc_Spacal.C::G4_CEmc_Spacal - Fatal Error - unrecognized SPACAL configuration #"
+        << "G4_CEmc_Spacal.C::CEMC_Towers - Fatal Error - unrecognized SPACAL configuration #"
         << Cemc_spacal_configuration << ". Force exiting..." << std::endl;
     exit(-1);
     return;
@@ -331,15 +329,36 @@ void CEMC_Towers(int verbosity = 0)
   TowerDigitizer->set_zero_suppression_ADC(16);  // eRD1 test beam setting
   se->registerSubsystem(TowerDigitizer);
 
-  RawTowerCalibration *TowerCalibration = new RawTowerCalibration("EmcRawTowerCalibration");
-  TowerCalibration->Detector("CEMC");
-  TowerCalibration->Verbosity(verbosity);
-  TowerCalibration->set_calib_algorithm(RawTowerCalibration::kTower_by_tower_calibration);
-  TowerCalibration->GetCalibrationParameters().ReadFromFile("CEMC","xml",0,0,
-      string(getenv("CALIBRATIONROOT")) + string("/CEMC/TowerCalib_2017ProjTilted/")); // calibration database
-  TowerCalibration->set_calib_const_GeV_ADC(1. / photoelectron_per_GeV / 0.9715 ); // overall energy scale based on 4-GeV photon simulations
-  TowerCalibration->set_pedstal_ADC(0);
-  se->registerSubsystem(TowerCalibration);
+  if (Cemc_spacal_configuration == PHG4CylinderGeom_Spacalv1::k1DProjectiveSpacal)
+  {
+    RawTowerCalibration *TowerCalibration = new RawTowerCalibration("EmcRawTowerCalibration");
+    TowerCalibration->Detector("CEMC");
+    TowerCalibration->Verbosity(verbosity);
+    TowerCalibration->set_calib_algorithm(RawTowerCalibration::kSimple_linear_calibration);
+    TowerCalibration->set_calib_const_GeV_ADC(1. / photoelectron_per_GeV);
+    TowerCalibration->set_pedstal_ADC(0);
+    se->registerSubsystem(TowerCalibration);
+  }
+  else if (Cemc_spacal_configuration == PHG4CylinderGeom_Spacalv1::k2DProjectiveSpacal)
+  {
+    RawTowerCalibration *TowerCalibration = new RawTowerCalibration("EmcRawTowerCalibration");
+    TowerCalibration->Detector("CEMC");
+    TowerCalibration->Verbosity(verbosity);
+    TowerCalibration->set_calib_algorithm(RawTowerCalibration::kTower_by_tower_calibration);
+    TowerCalibration->GetCalibrationParameters().ReadFromFile("CEMC","xml",0,0,
+        string(getenv("CALIBRATIONROOT")) + string("/CEMC/TowerCalib_2017ProjTilted/")); // calibration database
+    TowerCalibration->set_calib_const_GeV_ADC(1. / photoelectron_per_GeV / 0.9715 ); // overall energy scale based on 4-GeV photon simulations
+    TowerCalibration->set_pedstal_ADC(0);
+    se->registerSubsystem(TowerCalibration);
+  }
+  else
+  {
+    std::cout
+        << "G4_CEmc_Spacal.C::CEMC_Towers - Fatal Error - unrecognized SPACAL configuration #"
+        << Cemc_spacal_configuration << ". Force exiting..." << std::endl;
+    exit(-1);
+    return;
+  }
 
   return;
 }
