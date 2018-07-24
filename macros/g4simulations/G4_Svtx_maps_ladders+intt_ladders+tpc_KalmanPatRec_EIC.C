@@ -9,7 +9,7 @@ bool tpc_layers_40  = false;
 bool use_primary_vertex = false;
 
 const int n_maps_layer = 3;  // must be 0-3, setting it to zero removes MVTX completely, n < 3 gives the first n layers
-const int n_intt_layer = 4;  // must be 0-4, setting this to zero will remove the INTT completely, n < 4 gives you the first n layers
+const int n_intt_layer = 0;  // must be 0-4, setting this to zero will remove the INTT completely, n < 4 gives you the first n layers
 
 int n_tpc_layer_inner = 16;
 double tpc_layer_thick_inner = 1.25 / 2.0;
@@ -182,14 +182,18 @@ void SvtxInit(int verbosity = 0)
   // TPC readout shaping time and ADC clock parameters
   // these set the Z size of the TPC cells
   //=======================================
-  TPCShapingRMSLead = 32.0;  // ns, rising RMS equivalent of shaping amplifier for 80 ns SAMPA
-  TPCShapingRMSTail = 48.0;  // ns, falling RMS equivalent of shaping amplifier for 80 ns SAMPA
+  // TPCShapingRMSLead = 32.0;  // ns, rising RMS equivalent of shaping amplifier for 80 ns SAMPA
+  // TPCShapingRMSTail = 48.0;  // ns, falling RMS equivalent of shaping amplifier for 80 ns SAMPA
   TPCADCClock = 53.0;                           // ns, corresponds to an ADC clock rate of 18.8 MHz
+  TPCShapingRMSLead = 16.0;                     // ns, rising RMS equivalent of shaping amplifier for 40 ns SAMPA
+  TPCShapingRMSTail = 24.0;                     // ns, falling RMS equivalent of shaping amplifier for 40 ns SAMPA
   tpc_cell_z = TPCADCClock * TPCDriftVelocity;  // cm
 
-   //  these are fudge parameters, tuned to give average of 150 microns r-phi and 500 microns Z resolution in the outer TPC layers with the TPC setup used here and 80 ns SAMPA peaking time
-  TPC_SmearRPhi = 0.25;
-  TPC_SmearZ = 0.15;
+  //  TKH does not understand the physical origin of these parameters.
+  //  however, their impact seems quite small...
+  //  these are tuned to give 150 microns r-phi and 500 microns Z resolution in the outer TPC layers with the TPC setup used here
+  TPC_SmearRPhi = 0.215;
+  TPC_SmearZ = 0.20;
 }
 
 double Svtx(PHG4Reco* g4Reco, double radius,
@@ -622,17 +626,13 @@ void Svtx_Reco(int verbosity = 0)
     se->registerSubsystem(digiintt);
   }
 
-  // TPC layers use the Svtx digitizer
-  digi->SetTPCMinLayer(n_maps_layer + n_intt_layer);
-  double ENC = 670.0;  // standard
-  digi->SetENC(ENC);  
-  double ADC_threshold = 4.0*ENC; 
-  digi->SetADCThreshold(ADC_threshold);  // 4 * ENC seems OK
-    cout << " TPC digitizer: Setting ENC to " << ENC << " ADC threshold to " << ADC_threshold 
-       << " maps+INTT layers set to " << n_maps_layer + n_intt_layer << endl;
- 
+  // TPC layers
+  for (int i = n_maps_layer + n_intt_layer; i < Max_si_layer; ++i)
+  {
+    digi->set_adc_scale(i, 90000, 1.0); // need to set this based on ADC dynamic range
+  }
   se->registerSubsystem(digi);
-  
+
   //-------------------------------------
   // Apply Live Area Inefficiency to Hits
   //-------------------------------------
@@ -699,6 +699,7 @@ void Svtx_Reco(int verbosity = 0)
   tpcclusterizer->setEnergyCut(15 /*adc*/);
   tpcclusterizer->setFitWindowSigmas(0.0150, 0.0160);  // should be changed when TPC cluster resolution changes
   tpcclusterizer->setFitWindowMax(5 /*rphibins*/, 5 /*zbins*/);
+  tpcclusterizer->setFitEnergyThreshold(0.05 /*fraction*/);
   se->registerSubsystem(tpcclusterizer);
 
   // This should be true for everything except testing!

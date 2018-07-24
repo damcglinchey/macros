@@ -7,8 +7,6 @@ int Fun4All_G4_sPHENIX(
     const char *outputFile = "G4sPHENIX.root",
     const char *embed_input_file = "/sphenix/data/data02/review_2017-08-02/sHijing/fm_0-4.list")
 {
-  // Set the number of TPC layer
-  const int n_TPC_layers = 40;  // use 60 for backward compatibility only
 
   //===============
   // Input options
@@ -82,6 +80,9 @@ int Fun4All_G4_sPHENIX(
   bool do_hcalout_cluster = do_hcalout_twr && true;
   bool do_hcalout_eval = do_hcalout_cluster && true;
 
+  //! forward flux return plug door. Out of acceptance and off by default.
+  bool do_plugdoor = false;
+
   bool do_global = true;
   bool do_global_fastsim = true;
 
@@ -108,16 +109,15 @@ int Fun4All_G4_sPHENIX(
   gSystem->Load("libphhepmc.so");
   gSystem->Load("libg4testbench.so");
   gSystem->Load("libg4hough.so");
-  gSystem->Load("libcemc.so");
   gSystem->Load("libg4eval.so");
 
   // establish the geometry and reconstruction setup
   gROOT->LoadMacro("G4Setup_sPHENIX.C");
-  G4Init(do_svtx, do_pstof, do_cemc, do_hcalin, do_magnet, do_hcalout, do_pipe, n_TPC_layers);
+  G4Init(do_svtx, do_pstof, do_cemc, do_hcalin, do_magnet, do_hcalout, do_pipe, do_plugdoor);
 
   int absorberactive = 1;  // set to 1 to make all absorbers active volumes
-  //  const string magfield = "1.5"; // if like float -> solenoidal field in T, if string use as fieldmap name (including path)
-  const string magfield = "/phenix/upgrades/decadal/fieldmaps/sPHENIX.2d.root";  // if like float -> solenoidal field in T, if string use as fieldmap name (including path)
+  //  const string magfield = "1.5"; // alternatively to specify a constant magnetic field, give a float number, which will be translated to solenoidal field in T, if string use as fieldmap name (including path)
+  const string magfield = string(getenv("CALIBRATIONROOT")) + string("/Field/Map/sPHENIX.2d.root"); // default map from the calibration database
   const float magfield_rescale = -1.4 / 1.5;                                     // scale the map to a 1.4 T field
 
   //---------------
@@ -297,7 +297,7 @@ int Fun4All_G4_sPHENIX(
     //---------------------
 
     G4Setup(absorberactive, magfield, TPythia6Decayer::kAll,
-            do_svtx, do_pstof, do_cemc, do_hcalin, do_magnet, do_hcalout, do_pipe, magfield_rescale);
+            do_svtx, do_pstof, do_cemc, do_hcalin, do_magnet, do_hcalout, do_pipe,do_plugdoor, magfield_rescale);
   }
 
   //---------
